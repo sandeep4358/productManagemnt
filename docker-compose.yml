@@ -1,0 +1,29 @@
+version: '3'
+services:
+  practice-product:
+    image: sandeep022/practice-product:9
+    ports:
+      - 9001-9030:8081
+    environment:
+      POSTGRES_HOST: ska-postgresdb
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: testdb
+      POSTGRES_PORT: 5432
+    depends_on:
+      - ska-postgresdb
+
+  ska-postgresdb:
+    container_name: ska-postgresdb
+    image: postgres:latest
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

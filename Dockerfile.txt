@@ -1,0 +1,18 @@
+# Use Amazon Corretto 17 with Alpine Linux as the base image
+FROM amazoncorretto:17.0.0-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy the JAR file from target directory
+COPY target/app.jar app.jar
+
+# Expose the port used by the application
+EXPOSE 8080
+
+# Create a non-root user for security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+# Run the Java application with optimized JVM settings
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
