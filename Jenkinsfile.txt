@@ -9,12 +9,11 @@ pipeline {
             }
         }
 
-        stage('Gradle Build') {
-            steps {
-                echo 'Building project using Gradle'
-                sh './gradlew build -x test'  // Gradle build with test skipping
-            }
-        }
+         stage('Maven Build'){
+                        steps{
+                            sh 'mvn clean install -DskipTests'
+                        }
+                    }
 
         stage('Docker Build') {
             steps {

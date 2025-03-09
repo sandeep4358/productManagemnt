@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class JobResponse {
+public class ProductJobResponse {
     private String jobId;
     private StatusMessage statusMessage;
 }

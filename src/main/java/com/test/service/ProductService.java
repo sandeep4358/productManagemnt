@@ -1,9 +1,12 @@
 package com.test.service;
 
 import com.test.entity.ErrorLog;
+import com.test.entity.FileUploadStatus;
 import com.test.entity.Product;
 import com.test.repository.ErrorLogRepository;
+import com.test.repository.FileUploadStatusRepository;
 import com.test.repository.ProductRepository;
+import com.test.service.asyncPooling.AsyncJobStorage;
 import org.springframework.transaction.annotation.Transactional;;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
@@ -29,9 +33,10 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ErrorLogRepository errorLogRepository;
+    private final FileUploadStatusRepository fileUploadStatusRepository;
 
     @Async("taskExecutor")
-    public CompletableFuture<List<Product>> saveProduct(MultipartFile file,String processId) {
+    public CompletableFuture<List<Product>> saveProduct(MultipartFile file,String processId,String [] fileName) {
         log.info("Importing products from Excel - Process ID: {}", processId);
 
         return CompletableFuture.supplyAsync(() -> {
@@ -47,6 +52,14 @@ public class ProductService {
 
                 long end = System.currentTimeMillis();
                 log.info("Total time taken for product save: {} ms", (end - start));
+                String finalFileName = String.join(",", Arrays.asList(fileName));
+                FileUploadStatus fileUploadStatus = FileUploadStatus.builder()
+                        .processId(processId)
+                        .description("File upload is in COMPLETED")
+                        .status("COMPLETED")
+                        .updatedAt(OffsetDateTime.now())
+                        .build();
+                fileUploadStatusRepository.save(fileUploadStatus);
                 return savedProducts;
             } catch (Exception ex) {
                 log.error("Error while processing file {}: {}", file.getOriginalFilename(), ex.getMessage());
@@ -60,13 +73,34 @@ public class ProductService {
     public List<Product> saveAllProducts(List<Product> products) {
         return productRepository.saveAll(products);
     }
+
+    /**
+     * Fetch all products from the database
+     * @return
+     */
     @Async("taskExecutor")
-    public CompletableFuture<List<Product>> findAllProducts() {
-        log.info("Request to get a list of products by thread :: {}", Thread.currentThread().getName());
-        long start = System.currentTimeMillis();
-        List<Product> products = productRepository.findAll();
-        long end = System.currentTimeMillis();
-        return CompletableFuture.completedFuture(products);
+    public CompletableFuture<Void> findAllProducts(String jobId) {
+        log.info("Fetching all products from the database - Job ID: {}", jobId);
+        CompletableFuture.runAsync(() -> {
+            try {
+                try{
+                    log.info("Sleeping for 90 seconds");
+                    Thread.sleep(90_000);
+                    log.info("Waking up after 90 seconds");
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                List<Product> products = productRepository.findAll();
+                AsyncJobStorage.completeJob(jobId, products); // once the search is complete it will store in the map
+            } catch (Exception ex) {
+                log.error("Error while fetching products: {}", ex.getMessage());
+                AsyncJobStorage.failJob(jobId, ex.getMessage()); // once the search is complete it will store in the map
+                throw new RuntimeException("Failed to fetch products: " + ex.getMessage());
+            }
+        });
+
+        return CompletableFuture.completedFuture(null);
+
     }
 
     /*public List<Product> parseCsvFile(final MultipartFile file) {

@@ -22,11 +22,13 @@ public class FileUploadStatus {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "file_name", nullable = false)
+    @Column(name = "file_name")
     private String fileName;
 
     @Column(name = "status", nullable = false, length = 50)
     private String status;
+    @Column(name = "description")
+    private String description;
 
     @Column(name = "message", columnDefinition = "TEXT")
     private String message;
